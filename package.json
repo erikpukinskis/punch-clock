@@ -1,0 +1,13 @@
+{
+  "name": "punch-clock",
+  "version": "0.0.0",
+  "description": "In-memory store for keeping track of who did what when",
+  "main": "punch-clock.js",
+  "dependencies": {
+    "module-library": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/erikpukinskis/punch-clock.git"
+  }
+}
