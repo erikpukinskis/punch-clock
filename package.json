@@ -1,6 +1,6 @@
 {
   "name": "punch-clock",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "In-memory store for keeping track of who did what when",
   "main": "punch-clock.js",
   "dependencies": {
