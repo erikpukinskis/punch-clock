@@ -2,7 +2,9 @@ var library = require("module-library")(require)
 
 module.exports = library.export(
   "punch-clock",
-  function() {
+  ["identifiable"],
+  function(identifiable) {
+      var sessions = {}
       var sessionsByTaskId = {}
       var sessionsByCharacterId = {}
 
@@ -14,19 +16,36 @@ module.exports = library.export(
         list.push(newItem)
       }
 
+      var LAST = -1
+
+      function getFromList(set, reference, index) {
+        var list = set[reference]
+        if (!list) { return }
+        if (index == LAST) {
+          index = list.length - 1
+        }
+        return list[index]
+      }
+
       var punchClock = {
         start: function(name, characterId, taskId, startTime) {
           var session = {name: name, characterId: characterId, taskId: taskId, startTime: startTime}
 
-          addToList(sessionsByTaskId, taskId, session)
-          addToList(sessionsByCharacterId, characterId, session)
+          var id = identifiable.assignId(sessions)
+
+          sessions[id] = session
+
+          addToList(sessionsByTaskId, taskId, id)
+          addToList(sessionsByCharacterId, characterId, id)
         },
         getCurrentAssignmentId: function(characterId) {
-          var sessions = sessionsByCharacterId[characterId]
-          if (!sessions) { return }
-          var session = sessions[sessions.length-1]
+          var sessionId = getFromList(sessionsByCharacterId, characterId, LAST)
+          var session = sessions[sessionId]
+
+          if (!session) { return }
+
           var hasStopped = !!session.stopTime
-          debugger
+
           if (hasStopped) {
             return
           } else {
@@ -34,15 +53,36 @@ module.exports = library.export(
           }
         },
         stop: function(name, characterId, taskId, stopTime) {
-          var sessions = sessionsByCharacterId[characterId]
-          var session = sessions[sessions.length-1]
+          var sessionId = getFromList(sessionsByCharacterId, characterId, LAST)
+          var session = sessions[sessionId]
+
           if (session.taskId != taskId) {
             throw new Error("Trying to clock out of "+taskId+" but clocked into "+session.taskId)
           }
           session.stopTime = stopTime
+
+          return sessionId
         },
-        sessionsForTask: function(taskId) {
-          return sessionsByTaskId[taskId] || []
+        minutes: function(sessionId) {
+          var session = sessions[sessionId]
+          if (!session.stopTime) {
+            throw new Error("Punch clock session "+sessionId+" hasn't ended")
+          }
+          var milliseconds = new Date(session.stopTime) - new Date(session.startTime)
+          var minutes = milliseconds/1000/60
+          if (minutes < 0.5) { return 0 }
+          return Math.ceil(minutes)
+        },
+        describe: function(sessionId) {
+          var session = sessions[sessionId]
+          return session.name+" (id "+session.characterId+") worked for "+punchClock.minutes(sessionId)+" minutes"
+        },
+        eachSessionOnTask: function(taskId, callback) {
+          var ids = sessionsByTaskId[taskId] || []
+          for(var i=0; i<ids.length; i++) {
+            var id = ids[i]
+            callback(sessions[id])
+          }
         }
     }
 
